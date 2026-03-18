@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import useAuthStore from '../stores/authStore';
 
 const Dashboard = () => {
   const [stats, setStats] = useState({
@@ -10,10 +11,16 @@ const Dashboard = () => {
   });
   const [recentConversations, setRecentConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { isAuthenticated, checkAuth } = useAuthStore();
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        // 先检查认证状态
+        if (!isAuthenticated) {
+          await checkAuth();
+        }
+
         // 获取统计数据
         const [agentsResponse, conversationsResponse, toolsResponse] = await Promise.all([
           axios.get('/api/agents'),
@@ -34,13 +41,17 @@ const Dashboard = () => {
         setRecentConversations(conversations);
       } catch (error) {
         console.error('Error fetching stats:', error);
+        // 如果是401错误，尝试重新检查认证状态
+        if (error.response?.status === 401) {
+          await checkAuth();
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchStats();
-  }, []);
+  }, [isAuthenticated, checkAuth]);
 
   if (loading) {
     return (
@@ -99,7 +110,7 @@ const Dashboard = () => {
         <div className="bg-primary-module rounded-xl shadow-lg p-6 card-hover tech-border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-400 text-sm">可用工具</p>
+              <p className="text-gray-400 text-sm">工具总数</p>
               <h3 className="text-3xl font-bold text-white mt-2">{stats.tools}</h3>
             </div>
             <div className="w-12 h-12 bg-accent-pink/20 rounded-full flex items-center justify-center border border-accent-pink/30">
@@ -118,46 +129,25 @@ const Dashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
       >
+        <h2 className="text-xl font-bold text-white mb-4">最近对话</h2>
         <div className="bg-primary-module rounded-xl shadow-lg p-6 tech-border">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white">最近对话</h2>
-            <button className="text-accent-blue hover:text-accent-purple font-medium transition-colors">
-              查看全部
-            </button>
-          </div>
-          
-          {recentConversations.length > 0 ? (
+          {recentConversations.length === 0 ? (
+            <p className="text-gray-400">暂无对话记录</p>
+          ) : (
             <div className="space-y-4">
               {recentConversations.map((conversation) => (
-                <div key={conversation.id} className="flex items-center p-3 rounded-lg hover:bg-dark-400 transition-colors cursor-pointer">
-                  <div className="w-10 h-10 bg-accent-blue/20 rounded-full flex items-center justify-center mr-4 border border-accent-blue/30">
-                    <svg className="w-5 h-5 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium text-white">{conversation.title}</h3>
-                    <p className="text-sm text-gray-400">
-                      {new Date(conversation.created_at).toLocaleString()}
+                <div key={conversation.id} className="flex items-center justify-between p-3 hover:bg-dark-400 rounded-lg transition-colors">
+                  <div>
+                    <h3 className="text-white font-medium">{conversation.agent_name || 'AI Agent'}</h3>
+                    <p className="text-gray-400 text-sm mt-1">
+                      {conversation.last_message || '无消息'}
                     </p>
                   </div>
-                  <button className="text-accent-blue hover:text-accent-purple transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </button>
+                  <div className="text-gray-400 text-sm">
+                    {new Date(conversation.created_at).toLocaleString()}
+                  </div>
                 </div>
               ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-              <p className="text-gray-400">暂无对话记录</p>
-              <button className="mt-4 px-4 py-2 bg-gradient-to-r from-accent-blue to-accent-purple text-white rounded-lg hover:shadow-neon-blue transition-all duration-300">
-                开始对话
-              </button>
             </div>
           )}
         </div>

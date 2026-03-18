@@ -1,13 +1,60 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Navbar = ({ title, onLogout, onPageChange }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+  const buttonRef = useRef(null);
+
+  // 点击页面其他地方时关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef.current &&
+        buttonRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        !buttonRef.current.contains(event.target)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const toggleDropdown = () => {
+    setShowDropdown(!showDropdown);
+  };
+
+  const handleSettings = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('Settings clicked');
+    setShowDropdown(false);
+    if (onPageChange) {
+      onPageChange('settings');
+    }
+  };
+
+  const handleLogout = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('Logout clicked');
+    setShowDropdown(false);
+    if (onLogout) {
+      onLogout();
+    }
+  };
+
   return (
     <motion.nav
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="bg-primary-module shadow-md px-6 py-4 sticky top-0 z-10 border-b border-dark-300"
+      className="bg-primary-module shadow-md px-6 py-4 sticky top-0 z-50 border-b border-dark-300"
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center">
@@ -39,8 +86,12 @@ const Navbar = ({ title, onLogout, onPageChange }) => {
               <span className="absolute top-1 right-1 w-2 h-2 bg-accent-pink rounded-full shadow-neon-pink"></span>
             </button>
             
-            <div className="relative group">
-              <button className="flex items-center space-x-2 focus:outline-none">
+            <div className="relative">
+              <button 
+                ref={buttonRef}
+                className="user-button flex items-center space-x-2 focus:outline-none cursor-pointer"
+                onClick={toggleDropdown}
+              >
                 <div className="w-10 h-10 bg-dark-400 rounded-full flex items-center justify-center border border-accent-blue">
                   <span className="text-white font-medium">U</span>
                 </div>
@@ -50,21 +101,35 @@ const Navbar = ({ title, onLogout, onPageChange }) => {
                 </svg>
               </button>
               
-              <div className="absolute right-0 mt-2 w-48 bg-primary-module rounded-lg shadow-xl py-2 z-20 hidden group-hover:block border border-dark-300">
-                <button className="block w-full text-left px-4 py-2 text-gray-300 hover:bg-dark-400 hover:text-accent-blue transition-colors">
-                  个人资料
-                </button>
-                <button className="block w-full text-left px-4 py-2 text-gray-300 hover:bg-dark-400 hover:text-accent-blue transition-colors">
-                  设置
-                </button>
-                <div className="border-t border-dark-300 my-1"></div>
-                <button 
-                  onClick={onLogout}
-                  className="block w-full text-left px-4 py-2 text-accent-pink hover:bg-dark-400 transition-colors"
-                >
-                  退出登录
-                </button>
-              </div>
+              <AnimatePresence>
+                {showDropdown && (
+                  <motion.div 
+                    ref={dropdownRef}
+                    className="absolute right-0 mt-2 w-48 bg-primary-module rounded-lg shadow-xl py-2 border border-dark-300 z-50"
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    <button 
+                      onClick={handleSettings}
+                      className="w-full text-left px-4 py-2 text-gray-300 hover:bg-dark-400 hover:text-accent-blue transition-colors cursor-pointer"
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      设置
+                    </button>
+                    <div className="border-t border-dark-300 my-1"></div>
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2 text-accent-pink hover:bg-dark-400 transition-colors cursor-pointer"
+                      style={{ pointerEvents: 'auto' }}
+                    >
+                      退出登录
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
         </div>

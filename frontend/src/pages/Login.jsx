@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import useAuthStore from '../stores/authStore';
 
-const Login = ({ onRegister }) => {
+const Login = ({ onRegister, onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [inputFocus, setInputFocus] = useState({ email: false, password: false });
@@ -16,12 +16,16 @@ const Login = ({ onRegister }) => {
     setError('');
     
     try {
-      const success = await login(data.email, data.password);
-      if (!success) {
-        setError('邮箱或密码无效');
+      await login(data.email, data.password);
+      console.log('Login successful in component');
+      // 登录成功，调用回调函数
+      if (onLoginSuccess) {
+        onLoginSuccess();
       }
     } catch (err) {
-      setError('发生错误，请重试。');
+      console.error('Login component error:', err);
+      const errorMessage = err.response?.data?.detail || err.message || '邮箱或密码无效';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

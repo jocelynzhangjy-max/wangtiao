@@ -7,13 +7,16 @@ from sqlalchemy.orm import Session
 import os
 import hashlib
 from dotenv import load_dotenv
+import pathlib
 
-from backend.database import get_db
-from backend.models import User
+from ..database import get_db
+from ..models import User
 
-load_dotenv()
+# 加载项目根目录的.env文件
+base_dir = pathlib.Path(__file__).parent.parent.parent
+load_dotenv(base_dir / ".env")
 
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-for-jwt-authentication")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -52,6 +55,18 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+def verify_token(token: str):
+    """验证令牌并返回载荷"""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(

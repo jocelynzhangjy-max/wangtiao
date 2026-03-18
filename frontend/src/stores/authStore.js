@@ -36,6 +36,8 @@ const useAuthStore = create((set, get) => ({
   // 登录
   login: async (email, password) => {
     try {
+      console.log('Attempting login with:', email);
+      
       // 使用表单格式发送数据
       const formData = new URLSearchParams();
       formData.append('username', email);
@@ -47,12 +49,15 @@ const useAuthStore = create((set, get) => ({
         }
       });
 
+      console.log('Login response:', response.data);
+
       const { access_token } = response.data;
       localStorage.setItem('token', access_token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
 
       // 获取用户信息
       const userResponse = await axios.get('/api/users/me');
+      console.log('User info:', userResponse.data);
 
       set({
         isAuthenticated: true,
@@ -62,8 +67,10 @@ const useAuthStore = create((set, get) => ({
 
       return true;
     } catch (error) {
-      console.error('Login error:', error.response?.data || error.message);
-      return false;
+      console.error('Login error:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error message:', error.message);
+      throw error;
     }
   },
 

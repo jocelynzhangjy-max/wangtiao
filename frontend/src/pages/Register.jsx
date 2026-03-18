@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import useAuthStore from '../stores/authStore';
 
-const Register = ({ onLogin }) => {
+const Register = ({ onLogin, onRegisterSuccess }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,7 +13,7 @@ const Register = ({ onLogin }) => {
     password: false,
     confirmPassword: false
   });
-  const { register: registerUser } = useAuthStore();
+  const { register: registerUser, login } = useAuthStore();
   
   const { register, handleSubmit, formState: { errors }, watch } = useForm();
   const password = watch('password');
@@ -24,6 +24,7 @@ const Register = ({ onLogin }) => {
     setSuccess('');
     
     try {
+      // 注册新用户
       const success = await registerUser({
         username: data.username,
         email: data.email,
@@ -31,8 +32,21 @@ const Register = ({ onLogin }) => {
       });
       
       if (success) {
-        setSuccess('账户创建成功！请登录。');
-        setTimeout(() => onLogin(), 2000);
+        setSuccess('账户创建成功！正在自动登录...');
+        
+        // 注册成功后自动登录
+        try {
+          await login(data.email, data.password);
+          console.log('Auto login successful');
+          // 登录成功，调用回调函数
+          if (onRegisterSuccess) {
+            onRegisterSuccess();
+          }
+        } catch (loginErr) {
+          console.error('Auto login failed:', loginErr);
+          // 自动登录失败，跳转到登录页面
+          setTimeout(() => onLogin(), 2000);
+        }
       }
     } catch (err) {
       console.error('Registration error:', err);
